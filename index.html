@@ -182,47 +182,28 @@
         async function fetchEmoji(newOptionName) {
             try {
                 const prompt = `Pour le plat "${newOptionName}", quel est le meilleur emoji qui le représente ?`;
-                
                 const payload = {
                   contents: [{ role: "user", parts: [{ text: prompt }] }],
                   generationConfig: {
                     responseMimeType: "application/json",
                     responseSchema: {
                       type: "OBJECT",
-                      properties: {
-                        "emoji": { "type": "STRING", "description": "L'emoji qui représente le plat. Si aucun emoji spécifique n'est trouvé, utiliser '🍴'." }
-                      },
+                      properties: { "emoji": { "type": "STRING", "description": "L'emoji qui représente le plat. Si aucun emoji spécifique n'est trouvé, utiliser '🍴'." } },
                       required: ["emoji"]
                     }
                   }
                 };
-
                 const apiKey = "";
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-                
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                if (!response.ok) {
-                    throw new Error(`API error: ${response.statusText}`);
-                }
-
+                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                if (!response.ok) throw new Error(`API error: ${response.statusText}`);
                 const result = await response.json();
-                
                 if (result.candidates && result.candidates[0].content && result.candidates[0].content.parts[0]) {
                     const jsonText = result.candidates[0].content.parts[0].text;
                     const parsedJson = JSON.parse(jsonText);
-                    if (parsedJson.emoji) {
-                        return parsedJson.emoji;
-                    }
+                    if (parsedJson.emoji) return parsedJson.emoji;
                 }
-            } catch (error) {
-                console.error("Erreur lors de la recherche de l'emoji:", error);
-            }
-            // Si quelque chose échoue, retourner l'emoji par défaut
+            } catch (error) { console.error("Erreur emoji:", error); }
             return '🍴';
         }
 
@@ -326,27 +307,31 @@
 
         function handleOrderClick(event) {
             const keyword = event.target.dataset.keyword; if (!keyword) return;
-            orderBtn.textContent = 'Localisation...'; orderBtn.disabled = true;
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    const { latitude, longitude } = position.coords;
-                    const uberEatsUrl = `https://www.ubereats.com/fr/search?diningMode=DELIVERY&q=${encodeURIComponent(keyword)}&pl=${encodeURIComponent(JSON.stringify({latitude, longitude}))}`;
-                    if (typeof Android !== 'undefined' && Android.openExternalLink) {
-                        Android.openExternalLink(uberEatsUrl);
-                    } else {
+            
+            // -- MODIFICATION IMPORTANTE --
+            // On appelle directement le pont de communication Android
+            if (typeof Android !== 'undefined' && Android.openUberEats) {
+                Android.openUberEats(keyword);
+            } else {
+                // Comportement par défaut pour le navigateur web
+                orderBtn.textContent = 'Localisation...'; orderBtn.disabled = true;
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const { latitude, longitude } = position.coords;
+                        const uberEatsUrl = `https://www.ubereats.com/fr/search?diningMode=DELIVERY&q=${encodeURIComponent(keyword)}&pl=${encodeURIComponent(JSON.stringify({latitude, longitude}))}`;
                         window.open(uberEatsUrl, '_blank');
+                        orderBtn.textContent = 'Commander 🛵'; orderBtn.disabled = false;
+                    },
+                    (error) => {
+                        console.error("Géolocalisation:", error);
+                        let errorMessage = "Impossible de récupérer votre position. ";
+                        if (error.code === 1) errorMessage += "Vous avez refusé l'accès.";
+                        else errorMessage += "Veuillez vérifier les autorisations.";
+                        resultText.innerHTML = `<span class="text-red-500 text-sm">${errorMessage}</span>`;
+                        orderBtn.textContent = 'Commander 🛵'; orderBtn.disabled = false;
                     }
-                    orderBtn.textContent = 'Commander 🛵'; orderBtn.disabled = false;
-                },
-                (error) => {
-                    console.error("Géolocalisation:", error);
-                    let errorMessage = "Impossible de récupérer votre position. ";
-                    if (error.code === 1) errorMessage += "Vous avez refusé l'accès.";
-                    else errorMessage += "Veuillez vérifier les autorisations.";
-                    resultText.innerHTML = `<span class="text-red-500 text-sm">${errorMessage}</span>`;
-                    orderBtn.textContent = 'Commander 🛵'; orderBtn.disabled = false;
-                }
-            );
+                );
+            }
         }
 
         function easeOut(t, b, c, d) {
