@@ -73,9 +73,9 @@
         <section class="space-y-4">
             <div>
                 <label for="optionInput" class="block text-sm font-semibold mb-2 text-gray-600">Ajouter un plat (l'IA trouvera l'emoji !)</label>
-                <div class="flex space-x-3">
+                <div class="flex flex-col sm:flex-row gap-2">
                     <input type="text" id="optionInput" placeholder="Ex: Paella, Couscous..." class="flex-grow bg-gray-100 rounded-lg p-3 border-2 border-gray-200 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 transition">
-                    <button id="addBtn" class="bg-indigo-500 text-white font-bold py-3 px-6 rounded-lg hover:bg-indigo-600 transition-colors duration-200 shadow hover:shadow-lg disabled:opacity-75 disabled:cursor-wait">Ajouter</button>
+                    <button id="addBtn" class="bg-indigo-500 text-white font-bold py-3 px-6 rounded-lg hover:bg-indigo-600 transition-colors duration-200 shadow hover:shadow-lg disabled:opacity-75 disabled:cursor-wait w-full sm:w-auto">Ajouter</button>
                 </div>
             </div>
             
@@ -121,7 +121,7 @@
         let canPlayTick = true;
 
         function setTitle(state = 'default') {
-            mainTitle.innerHTML = (state === 'celebrate') ? 'Bon appétit ! 🎉' : "Qu'est-ce qu'on mange ? 🤔";
+            mainTitle.innerHTML = (state === 'celebrate') ? 'Bon appétit ! 🎉' : "Qu'est-ce qu'on mange ? �";
         }
 
         function renderOptionsList() {
@@ -181,7 +181,12 @@
         
         async function fetchEmoji(newOptionName) {
             try {
-                const prompt = `Quel est le meilleur emoji pour représenter le plat "${newOptionName}" ? Réponds uniquement avec l'emoji.`;
+                // ** CORRECTION : Amélioration du prompt pour l'IA **
+                const prompt = `Trouve le meilleur emoji pour représenter le plat suivant : "${newOptionName}".
+                Réponds UNIQUEMENT avec l'emoji, sans aucun autre texte ou explication.
+                Par exemple, pour "Pizza", la réponse doit être "🍕". Pour "Salade César", la réponse doit être "🥗".
+                Si tu ne trouves pas d'emoji spécifique, utilise "🍴".`;
+
                 const payload = { contents: [{ role: "user", parts: [{ text: prompt }] }] };
                 const apiKey = "";
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
@@ -189,7 +194,7 @@
                 if (!response.ok) throw new Error(`API error: ${response.statusText}`);
                 const result = await response.json();
                 if (result.candidates && result.candidates[0].content && result.candidates[0].content.parts[0]) {
-                     const text = result.candidates[0].content.parts[0].text;
+                     const text = result.candidates[0].content.parts[0].text.trim();
                      const emojiRegex = /(\p{Emoji_Presentation}|\p{Emoji}\uFE0F)/gu;
                      const foundEmojis = text.match(emojiRegex);
                      if (foundEmojis && foundEmojis.length > 0) return foundEmojis[0];
@@ -303,10 +308,11 @@
                 (position) => {
                     const { latitude, longitude } = position.coords;
                     const uberEatsUrl = `https://www.ubereats.com/fr/search?diningMode=DELIVERY&q=${encodeURIComponent(keyword)}&pl=${encodeURIComponent(JSON.stringify({latitude, longitude}))}`;
-                    
-                    // On utilise simplement window.open. L'app Android se chargera de l'intercepter.
-                    window.open(uberEatsUrl, '_blank');
-                    
+                    if (typeof Android !== 'undefined' && Android.openExternalLink) {
+                        Android.openExternalLink(uberEatsUrl);
+                    } else {
+                        window.open(uberEatsUrl, '_blank');
+                    }
                     orderBtn.textContent = 'Commander 🛵'; orderBtn.disabled = false;
                 },
                 (error) => {
