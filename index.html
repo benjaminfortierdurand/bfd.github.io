@@ -121,7 +121,7 @@
         let canPlayTick = true;
 
         function setTitle(state = 'default') {
-            mainTitle.innerHTML = (state === 'celebrate') ? 'Bon appétit ! 🎉' : "Qu'est-ce qu'on mange ? �";
+            mainTitle.innerHTML = (state === 'celebrate') ? 'Bon appétit ! 🎉' : "Qu'est-ce qu'on mange ? 🤔";
         }
 
         function renderOptionsList() {
@@ -181,25 +181,48 @@
         
         async function fetchEmoji(newOptionName) {
             try {
-                // ** CORRECTION : Amélioration du prompt pour l'IA **
-                const prompt = `Trouve le meilleur emoji pour représenter le plat suivant : "${newOptionName}".
-                Réponds UNIQUEMENT avec l'emoji, sans aucun autre texte ou explication.
-                Par exemple, pour "Pizza", la réponse doit être "🍕". Pour "Salade César", la réponse doit être "🥗".
-                Si tu ne trouves pas d'emoji spécifique, utilise "🍴".`;
+                const prompt = `Pour le plat "${newOptionName}", quel est le meilleur emoji qui le représente ?`;
+                
+                const payload = {
+                  contents: [{ role: "user", parts: [{ text: prompt }] }],
+                  generationConfig: {
+                    responseMimeType: "application/json",
+                    responseSchema: {
+                      type: "OBJECT",
+                      properties: {
+                        "emoji": { "type": "STRING", "description": "L'emoji qui représente le plat. Si aucun emoji spécifique n'est trouvé, utiliser '🍴'." }
+                      },
+                      required: ["emoji"]
+                    }
+                  }
+                };
 
-                const payload = { contents: [{ role: "user", parts: [{ text: prompt }] }] };
                 const apiKey = "";
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                if (!response.ok) throw new Error(`API error: ${response.statusText}`);
-                const result = await response.json();
-                if (result.candidates && result.candidates[0].content && result.candidates[0].content.parts[0]) {
-                     const text = result.candidates[0].content.parts[0].text.trim();
-                     const emojiRegex = /(\p{Emoji_Presentation}|\p{Emoji}\uFE0F)/gu;
-                     const foundEmojis = text.match(emojiRegex);
-                     if (foundEmojis && foundEmojis.length > 0) return foundEmojis[0];
+                
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`API error: ${response.statusText}`);
                 }
-            } catch (error) { console.error("Erreur emoji:", error); }
+
+                const result = await response.json();
+                
+                if (result.candidates && result.candidates[0].content && result.candidates[0].content.parts[0]) {
+                    const jsonText = result.candidates[0].content.parts[0].text;
+                    const parsedJson = JSON.parse(jsonText);
+                    if (parsedJson.emoji) {
+                        return parsedJson.emoji;
+                    }
+                }
+            } catch (error) {
+                console.error("Erreur lors de la recherche de l'emoji:", error);
+            }
+            // Si quelque chose échoue, retourner l'emoji par défaut
             return '🍴';
         }
 
