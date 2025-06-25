@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Qu'est-ce qu'on mange ?</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: #f7f8fc;
+        }
+        #wheel-container::before {
+            content: ''; position: absolute; top: -10px; left: 50%;
+            transform: translateX(-50%); width: 0; height: 0;
+            border-left: 18px solid transparent; border-right: 18px solid transparent;
+            border-top: 25px solid #ef4444; z-index: 10;
+        }
+        .btn-3d { transition: all 0.1s ease-in-out; }
+        .btn-3d:active { transform: translateY(6px); box-shadow: none !important; }
+
+        #spinBtn { background: linear-gradient(180deg, #f87171 0%, #ef4444 100%); box-shadow: 0 6px 0 #b91c1c; }
+        #orderBtn { background: linear-gradient(180deg, #2dd4bf 0%, #0d9488 100%); box-shadow: 0 6px 0 #0f766e; }
+        #shareBtn { background: linear-gradient(180deg, #60a5fa 0%, #2563eb 100%); box-shadow: 0 6px 0 #1e40af; }
+
+        .animate-pop-in { animation: popIn 0.6s cubic-bezier(0.68, -0.6, 0.27, 1.6) forwards; }
+        @keyframes popIn { from { transform: scale(0.3) rotate(-30deg); opacity: 0; } to { transform: scale(1) rotate(0deg); opacity: 1; } }
+        
+        .list-item-enter { animation: slideIn 0.4s ease-out forwards; }
+        @keyframes slideIn { from { opacity: 0; transform: translateX(-20px); } to { opacity: 1; transform: translateX(0); } }
+        
+        summary { cursor: pointer; list-style: none; }
+        summary::-webkit-details-marker { display: none; }
+        summary::after { content: '▲'; font-size: 0.8em; margin-left: 8px; display: inline-block; transition: transform 0.2s; }
+        details[open] > summary::after { transform: rotate(180deg); }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4">
+
+    <main class="bg-white rounded-3xl shadow-2xl p-6 sm:p-8 w-full max-w-md mx-auto text-gray-800">
+        
+        <h1 id="mainTitle" class="text-3xl md:text-4xl font-bold text-center mb-6"></h1>
+
+        <div id="wheel-container" class="relative w-full max-w-sm mx-auto mb-6" style="aspect-ratio: 1/1;">
+            <canvas id="wheelCanvas" width="500" height="500" class="w-full h-full"></canvas>
+        </div>
+        
+        <div class="h-16 mb-4 flex flex-col items-center justify-center">
+             <p id="resultText" class="text-center text-xl sm:text-2xl font-bold transition-all duration-300"></p>
+             <div id="resultActions" class="hidden mt-2 flex items-center justify-center space-x-4">
+                 <button id="orderBtn" class="text-white font-bold py-2 px-6 rounded-xl transition-all duration-200 text-sm btn-3d">
+                    Commander 🛵
+                 </button>
+                 <button id="shareBtn" class="text-white font-bold py-2 px-6 rounded-xl btn-3d">
+                    Partager 🔗
+                </button>
+             </div>
+        </div>
+
+        <div class="grid gap-4">
+            <button id="spinBtn" class="w-full text-white font-bold text-2xl py-4 px-10 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed btn-3d">
+                LANCER ! 🚀
+            </button>
+        </div>
+        <p id="copyFeedback" class="text-center text-green-600 font-semibold mt-2 h-4"></p>
+        
+
+        <hr class="my-6 border-gray-200">
+
+        <section class="space-y-4">
+            <div>
+                <label for="optionInput" class="block text-sm font-semibold mb-2 text-gray-600">Ajouter un plat (l'IA trouvera l'emoji !)</label>
+                <div class="flex space-x-3">
+                    <input type="text" id="optionInput" placeholder="Ex: Paella, Couscous..." class="flex-grow bg-gray-100 rounded-lg p-3 border-2 border-gray-200 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 transition">
+                    <button id="addBtn" class="bg-indigo-500 text-white font-bold py-3 px-6 rounded-lg hover:bg-indigo-600 transition-colors duration-200 shadow hover:shadow-lg disabled:opacity-75 disabled:cursor-wait">Ajouter</button>
+                </div>
+            </div>
+            
+            <details open>
+                <summary class="text-lg font-semibold text-gray-700 select-none">Plats Actuels</summary>
+                <div id="optionsList" class="mt-2 bg-gray-50 rounded-lg p-3 space-y-2 max-h-48 overflow-y-auto"></div>
+            </details>
+            
+            <details id="recentlyDeletedContainer" class="hidden">
+                <summary class="text-lg font-semibold text-gray-700 select-none">Récemment Supprimés</summary>
+                <div id="recentlyDeletedList" class="mt-2 bg-gray-50 rounded-lg p-3 space-y-2 max-h-48 overflow-y-auto"></div>
+            </details>
+        </section>
+    </main>
+
+    <script>
+        const canvas = document.getElementById('wheelCanvas');
+        const ctx = canvas.getContext('2d');
+        const spinBtn = document.getElementById('spinBtn');
+        const shareBtn = document.getElementById('shareBtn');
+        const copyFeedback = document.getElementById('copyFeedback');
+        const resultText = document.getElementById('resultText');
+        const orderBtn = document.getElementById('orderBtn');
+        const optionInput = document.getElementById('optionInput');
+        const addBtn = document.getElementById('addBtn');
+        const optionsList = document.getElementById('optionsList');
+        const recentlyDeletedContainer = document.getElementById('recentlyDeletedContainer');
+        const recentlyDeletedList = document.getElementById('recentlyDeletedList');
+        const mainTitle = document.getElementById('mainTitle');
+        const resultActions = document.getElementById('resultActions');
+        
+        let options = [];
+        let recentlyDeletedOptions = [];
+        const colors = ["#ef4444", "#f97316", "#f59e0b", "#84cc16", "#22c55e", "#14b8a6", "#06b6d4", "#3b82f6", "#8b5cf6", "#d946ef"];
+        
+        let startAngle = 0, arc = 0, spinTimeout = null, spinAngleStart = 0, spinTime = 0, spinTimeTotal = 0;
+
+        let audioStarted = false;
+        const tickSynth = new Tone.MembraneSynth({ pitchDecay: 0.01, octaves: 2, envelope: { attack: 0.001, decay: 0.2, sustain: 0 } }).toDestination();
+        const winSynth = new Tone.PolySynth(Tone.Synth, { envelope: { attack: 0.02, decay: 0.1, sustain: 0.3, release: 0.4 } }).toDestination();
+        winSynth.volume.value = -6;
+        let lastSegmentIndex = 0;
+        let canPlayTick = true; // Variable for throttling the sound
+
+        function setTitle(state = 'default') {
+            if (state === 'celebrate') {
+                 mainTitle.innerHTML = 'Bon appétit ! 🎉';
+            } else {
+                 mainTitle.innerHTML = "Qu'est-ce qu'on mange ? 🤔";
+            }
+        }
+
+        function renderOptionsList() {
+            optionsList.innerHTML = options.length === 0 
+                ? '<p class="text-gray-500 text-center p-4">Ajoutez des plats !</p>'
+                : options.map((option, index) => `
+                    <div class="list-item-enter flex items-center justify-between bg-white p-2 rounded-md shadow-sm">
+                        <span class="font-medium">${option.name} ${option.emoji}</span>
+                        <button data-index="${index}" class="remove-btn text-gray-400 hover:text-red-500 font-bold text-xl px-2 transition-colors">&times;</button>
+                    </div>`).join('');
+        }
+
+        function renderRecentlyDeletedList() {
+            recentlyDeletedContainer.classList.toggle('hidden', recentlyDeletedOptions.length === 0);
+            recentlyDeletedList.innerHTML = recentlyDeletedOptions.map((option, index) => `
+                <div class="list-item-enter flex items-center justify-between bg-white p-2 rounded-md shadow-sm">
+                    <span class="font-medium text-gray-500 italic">${option.name} ${option.emoji}</span>
+                    <button data-index="${index}" class="restore-btn text-green-500 hover:text-green-700 font-bold text-2xl px-2 transition-colors">&#x21BA;</button>
+                </div>`).join('');
+        }
+        
+        function drawWheel() {
+            const outsideRadius = 220, textRadius = 160, canvasSize = 500;
+            arc = options.length > 0 ? (2 * Math.PI) / options.length : 0;
+            ctx.clearRect(0, 0, canvasSize, canvasSize);
+
+            for (let i = 0; i < options.length; i++) {
+                const angle = startAngle + i * arc;
+                ctx.fillStyle = colors[i % colors.length];
+                ctx.beginPath(); ctx.moveTo(canvasSize/2, canvasSize/2);
+                ctx.arc(canvasSize/2, canvasSize/2, outsideRadius, angle, angle + arc, false);
+                ctx.closePath(); ctx.fill();
+            }
+
+            if (options.length > 1) {
+                ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 5;
+                for (let i = 0; i < options.length; i++) {
+                    const angle = startAngle + i * arc;
+                    ctx.beginPath(); ctx.moveTo(canvasSize/2, canvasSize/2);
+                    ctx.lineTo(canvasSize/2 + Math.cos(angle) * outsideRadius, canvasSize/2 + Math.sin(angle) * outsideRadius);
+                    ctx.stroke();
+                }
+            }
+            
+            ctx.fillStyle = "white"; ctx.font = 'bold 18px Poppins, sans-serif';
+            for (let i = 0; i < options.length; i++) {
+                ctx.save();
+                const textAngle = startAngle + i * arc + arc / 2;
+                ctx.translate(canvasSize/2 + Math.cos(textAngle) * textRadius, canvasSize/2 + Math.sin(textAngle) * textRadius);
+                const rotation = (textAngle > Math.PI / 2 && textAngle < 3 * Math.PI / 2) ? textAngle + Math.PI : textAngle;
+                ctx.rotate(rotation);
+                const text = `${options[i].name} ${options[i].emoji}`;
+                ctx.fillText(text, -ctx.measureText(text).width / 2, 6);
+                ctx.restore();
+            }
+        }
+        
+        async function fetchEmoji(newOptionName) {
+            try {
+                const prompt = `Quel est le meilleur emoji pour représenter le plat "${newOptionName}" ? Réponds uniquement avec l'emoji.`;
+                const payload = { contents: [{ role: "user", parts: [{ text: prompt }] }] };
+                const apiKey = "";
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                if (!response.ok) throw new Error(`API error: ${response.statusText}`);
+                const result = await response.json();
+                if (result.candidates && result.candidates[0].content && result.candidates[0].content.parts[0]) {
+                     const text = result.candidates[0].content.parts[0].text;
+                     const emojiRegex = /(\p{Emoji_Presentation}|\p{Emoji}\uFE0F)/gu;
+                     const foundEmojis = text.match(emojiRegex);
+                     if (foundEmojis && foundEmojis.length > 0) return foundEmojis[0];
+                }
+            } catch (error) {
+                console.error("Erreur lors de la recherche de l'emoji:", error);
+            }
+            return '🍴';
+        }
+
+        async function addOption(name, emoji) {
+            if (!name) return;
+            const newOptionName = name.trim();
+             if (!newOptionName || options.some(opt => opt.name.toLowerCase() === newOptionName.toLowerCase())) return;
+
+            addBtn.disabled = true;
+            addBtn.textContent = '...';
+
+            let finalEmoji = emoji;
+            if (!finalEmoji) {
+                finalEmoji = await fetchEmoji(newOptionName);
+            }
+
+            options.push({ name: newOptionName.charAt(0).toUpperCase() + newOptionName.slice(1), emoji: finalEmoji });
+            optionInput.value = '';
+            addBtn.disabled = false;
+            addBtn.textContent = 'Ajouter';
+            updateApp();
+        }
+
+        function removeOption(index) {
+            const [deletedOption] = options.splice(index, 1);
+            if (deletedOption) recentlyDeletedOptions.push(deletedOption);
+            updateApp();
+        }
+        
+        function restoreOption(index) {
+            const [restoredOption] = recentlyDeletedOptions.splice(index, 1);
+            if (restoredOption) options.push(restoredOption);
+            updateApp();
+        }
+
+        function fireConfetti() {
+            var end = Date.now() + (3 * 1000);
+            var colors = ['#f87171', '#fb923c', '#facc15', '#4ade80', '#2dd4bf', '#60a5fa', '#a78bfa'];
+
+            (function frame() {
+              confetti({
+                particleCount: 2,
+                angle: 60,
+                spread: 55,
+                origin: { x: 0 },
+                colors: colors
+              });
+              confetti({
+                particleCount: 2,
+                angle: 120,
+                spread: 55,
+                origin: { x: 1 },
+                colors: colors
+              });
+
+              if (Date.now() < end) {
+                requestAnimationFrame(frame);
+              }
+            }());
+        }
+        
+        function spin() {
+            if (options.length < 2) return;
+            if (!audioStarted) { Tone.start(); audioStarted = true; }
+            setTitle('default');
+            spinBtn.disabled = true;
+            resultText.textContent = 'Ça tourne...';
+            resultActions.classList.add('hidden');
+            resultText.classList.remove('animate-pop-in');
+            spinAngleStart = Math.random() * 10 + 10;
+            spinTime = 0; spinTimeTotal = Math.random() * 4000 + 5000;
+            rotateWheel();
+        }
+
+        function rotateWheel() {
+            spinTime += 30;
+            if (spinTime >= spinTimeTotal) { stopRotateWheel(); return; }
+            const spinAngle = spinAngleStart - easeOut(spinTime, 0, spinAngleStart, spinTimeTotal);
+            startAngle += (spinAngle * Math.PI / 180);
+            drawWheel();
+            const currentSegmentIndex = Math.floor(options.length - (startAngle * options.length / (2 * Math.PI))) % options.length;
+            if (currentSegmentIndex !== lastSegmentIndex) {
+                if (canPlayTick) {
+                    tickSynth.triggerAttack("C2");
+                    canPlayTick = false;
+                    setTimeout(() => { canPlayTick = true; }, 50);
+                }
+                lastSegmentIndex = currentSegmentIndex;
+            }
+            spinTimeout = requestAnimationFrame(rotateWheel);
+        }
+
+        function stopRotateWheel() {
+            cancelAnimationFrame(spinTimeout);
+            const degrees = startAngle * 180 / Math.PI + 90;
+            const arcd = arc * 180 / Math.PI;
+            const index = Math.floor((360 - degrees % 360) / arcd) % options.length;
+            const option = options[index];
+            resultText.innerHTML = `Ce sera : <span class="text-indigo-600">${option.name} ${option.emoji}</span> !`;
+            resultText.classList.add('animate-pop-in');
+            setTitle('celebrate');
+            spinBtn.disabled = false;
+            winSynth.triggerAttackRelease(["C4", "E4", "G4", "C5"], "0.8");
+            fireConfetti();
+            resultActions.classList.remove('hidden');
+            orderBtn.dataset.keyword = option.name;
+        }
+        
+        function handleShareClick() {
+            const dishNames = options.map(opt => opt.name).join(',');
+            const url = new URL(window.location.href);
+            url.searchParams.set('dishes', encodeURIComponent(dishNames));
+            const textToCopy = url.href;
+
+            const textArea = document.createElement("textarea");
+            textArea.style.position = 'fixed';
+            textArea.style.top = '-9999px';
+            textArea.style.left = '-9999px';
+            textArea.value = textToCopy;
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+
+            try {
+                const successful = document.execCommand('copy');
+                if (successful) {
+                    copyFeedback.textContent = 'Lien copié !';
+                } else {
+                    copyFeedback.textContent = 'Erreur de copie';
+                }
+            } catch (err) {
+                console.error('Erreur de copie : ', err);
+                copyFeedback.textContent = 'Erreur de copie';
+            }
+
+            document.body.removeChild(textArea);
+            setTimeout(() => { copyFeedback.textContent = ''; }, 2000);
+        }
+
+        function handleOrderClick(event) {
+            const keyword = event.target.dataset.keyword;
+            if (!keyword) return;
+            orderBtn.textContent = 'Localisation...';
+            orderBtn.disabled = true;
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const { latitude, longitude } = position.coords;
+                    const uberEatsUrl = `https://www.ubereats.com/fr/search?diningMode=DELIVERY&q=${encodeURIComponent(keyword)}&pl=${encodeURIComponent(JSON.stringify({latitude, longitude}))}`;
+                    window.open(uberEatsUrl, '_blank');
+                    orderBtn.textContent = 'Commander 🛵';
+                    orderBtn.disabled = false;
+                },
+                (error) => {
+                    console.error("Erreur de géolocalisation:", error);
+                    let errorMessage = "Impossible de récupérer votre position. ";
+                    if (error.code === 1) errorMessage += "Vous avez refusé l'accès.";
+                    else errorMessage += "Veuillez vérifier les autorisations.";
+                    resultText.innerHTML = `<span class="text-red-500 text-sm">${errorMessage}</span>`;
+                    orderBtn.textContent = 'Commander �';
+                    orderBtn.disabled = false;
+                }
+            );
+        }
+
+        function easeOut(t, b, c, d) {
+            const ts = (t /= d) * t; const tc = ts * t;
+            return b + c * (tc + -3 * ts + 3 * t);
+        }
+
+        async function loadFromURL() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const sharedDishes = urlParams.get('dishes');
+            if (sharedDishes) {
+                const dishNames = decodeURIComponent(sharedDishes).split(',');
+                options = [];
+                await Promise.all(dishNames.map(name => addOption(name, null)));
+            } else {
+                 options = [
+                    { name: 'Pizza', emoji: '🍕' }, { name: 'Burger', emoji: '🍔' }, { name: 'Sushi', emoji: '🍣' },
+                    { name: 'Salade', emoji: '🥗' }, { name: 'Pâtes', emoji: '🍝' }, { name: 'Tacos', emoji: '🌮' },
+                    { name: 'Libanais', emoji: '🥙' }, { name: 'Poulet frit', emoji: '🍗' }
+                ];
+            }
+        }
+        
+        async function init() {
+            setTitle();
+            await loadFromURL();
+            updateApp();
+        }
+
+        function updateApp() {
+            renderOptionsList();
+            renderRecentlyDeletedList();
+            drawWheel();
+            spinBtn.disabled = options.length < 2;
+        }
+
+        // --- Event Listeners ---
+        spinBtn.addEventListener('click', spin);
+        shareBtn.addEventListener('click', handleShareClick);
+        orderBtn.addEventListener('click', handleOrderClick);
+        addBtn.addEventListener('click', () => addOption(optionInput.value, null));
+        optionInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') { e.preventDefault(); addOption(optionInput.value, null); }
+        });
+        optionsList.addEventListener('click', (e) => {
+            if (e.target.closest('.remove-btn')) { removeOption(parseInt(e.target.closest('.remove-btn').dataset.index, 10)); }
+        });
+        recentlyDeletedList.addEventListener('click', (e) => {
+             if (e.target.closest('.restore-btn')) { restoreOption(parseInt(e.target.closest('.restore-btn').dataset.index, 10)); }
+        });
+        
+        init();
+    </script>
+</body>
+</html>
