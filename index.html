@@ -118,14 +118,10 @@
         const winSynth = new Tone.PolySynth(Tone.Synth, { envelope: { attack: 0.02, decay: 0.1, sustain: 0.3, release: 0.4 } }).toDestination();
         winSynth.volume.value = -6;
         let lastSegmentIndex = 0;
-        let canPlayTick = true; // Variable for throttling the sound
+        let canPlayTick = true;
 
         function setTitle(state = 'default') {
-            if (state === 'celebrate') {
-                 mainTitle.innerHTML = 'Bon appétit ! 🎉';
-            } else {
-                 mainTitle.innerHTML = "Qu'est-ce qu'on mange ? 🤔";
-            }
+            mainTitle.innerHTML = (state === 'celebrate') ? 'Bon appétit ! 🎉' : "Qu'est-ce qu'on mange ? 🤔";
         }
 
         function renderOptionsList() {
@@ -198,9 +194,7 @@
                      const foundEmojis = text.match(emojiRegex);
                      if (foundEmojis && foundEmojis.length > 0) return foundEmojis[0];
                 }
-            } catch (error) {
-                console.error("Erreur lors de la recherche de l'emoji:", error);
-            }
+            } catch (error) { console.error("Erreur emoji:", error); }
             return '🍴';
         }
 
@@ -209,18 +203,10 @@
             const newOptionName = name.trim();
              if (!newOptionName || options.some(opt => opt.name.toLowerCase() === newOptionName.toLowerCase())) return;
 
-            addBtn.disabled = true;
-            addBtn.textContent = '...';
-
-            let finalEmoji = emoji;
-            if (!finalEmoji) {
-                finalEmoji = await fetchEmoji(newOptionName);
-            }
-
+            addBtn.disabled = true; addBtn.textContent = '...';
+            let finalEmoji = emoji || await fetchEmoji(newOptionName);
             options.push({ name: newOptionName.charAt(0).toUpperCase() + newOptionName.slice(1), emoji: finalEmoji });
-            optionInput.value = '';
-            addBtn.disabled = false;
-            addBtn.textContent = 'Ajouter';
+            optionInput.value = ''; addBtn.disabled = false; addBtn.textContent = 'Ajouter';
             updateApp();
         }
 
@@ -239,36 +225,18 @@
         function fireConfetti() {
             var end = Date.now() + (3 * 1000);
             var colors = ['#f87171', '#fb923c', '#facc15', '#4ade80', '#2dd4bf', '#60a5fa', '#a78bfa'];
-
             (function frame() {
-              confetti({
-                particleCount: 2,
-                angle: 60,
-                spread: 55,
-                origin: { x: 0 },
-                colors: colors
-              });
-              confetti({
-                particleCount: 2,
-                angle: 120,
-                spread: 55,
-                origin: { x: 1 },
-                colors: colors
-              });
-
-              if (Date.now() < end) {
-                requestAnimationFrame(frame);
-              }
+              confetti({ particleCount: 2, angle: 60, spread: 55, origin: { x: 0 }, colors: colors });
+              confetti({ particleCount: 2, angle: 120, spread: 55, origin: { x: 1 }, colors: colors });
+              if (Date.now() < end) { requestAnimationFrame(frame); }
             }());
         }
         
         function spin() {
             if (options.length < 2) return;
             if (!audioStarted) { Tone.start(); audioStarted = true; }
-            setTitle('default');
-            spinBtn.disabled = true;
-            resultText.textContent = 'Ça tourne...';
-            resultActions.classList.add('hidden');
+            setTitle('default'); spinBtn.disabled = true;
+            resultText.textContent = 'Ça tourne...'; resultActions.classList.add('hidden');
             resultText.classList.remove('animate-pop-in');
             spinAngleStart = Math.random() * 10 + 10;
             spinTime = 0; spinTimeTotal = Math.random() * 4000 + 5000;
@@ -285,8 +253,7 @@
             if (currentSegmentIndex !== lastSegmentIndex) {
                 if (canPlayTick) {
                     tickSynth.triggerAttack("C2");
-                    canPlayTick = false;
-                    setTimeout(() => { canPlayTick = true; }, 50);
+                    canPlayTick = false; setTimeout(() => { canPlayTick = true; }, 50);
                 }
                 lastSegmentIndex = currentSegmentIndex;
             }
@@ -301,8 +268,7 @@
             const option = options[index];
             resultText.innerHTML = `Ce sera : <span class="text-indigo-600">${option.name} ${option.emoji}</span> !`;
             resultText.classList.add('animate-pop-in');
-            setTitle('celebrate');
-            spinBtn.disabled = false;
+            setTitle('celebrate'); spinBtn.disabled = false;
             winSynth.triggerAttackRelease(["C4", "E4", "G4", "C5"], "0.8");
             fireConfetti();
             resultActions.classList.remove('hidden');
@@ -314,53 +280,42 @@
             const url = new URL(window.location.href);
             url.searchParams.set('dishes', encodeURIComponent(dishNames));
             const textToCopy = url.href;
-
             const textArea = document.createElement("textarea");
-            textArea.style.position = 'fixed';
-            textArea.style.top = '-9999px';
-            textArea.style.left = '-9999px';
+            textArea.style.position = 'fixed'; textArea.style.top = '-9999px'; textArea.style.left = '-9999px';
             textArea.value = textToCopy;
             document.body.appendChild(textArea);
-            textArea.focus();
-            textArea.select();
-
+            textArea.focus(); textArea.select();
             try {
-                const successful = document.execCommand('copy');
-                if (successful) {
-                    copyFeedback.textContent = 'Lien copié !';
-                } else {
-                    copyFeedback.textContent = 'Erreur de copie';
-                }
+                if (document.execCommand('copy')) copyFeedback.textContent = 'Lien copié !';
+                else copyFeedback.textContent = 'Erreur de copie';
             } catch (err) {
-                console.error('Erreur de copie : ', err);
+                console.error('Erreur de copie:', err);
                 copyFeedback.textContent = 'Erreur de copie';
             }
-
             document.body.removeChild(textArea);
             setTimeout(() => { copyFeedback.textContent = ''; }, 2000);
         }
 
         function handleOrderClick(event) {
-            const keyword = event.target.dataset.keyword;
-            if (!keyword) return;
-            orderBtn.textContent = 'Localisation...';
-            orderBtn.disabled = true;
+            const keyword = event.target.dataset.keyword; if (!keyword) return;
+            orderBtn.textContent = 'Localisation...'; orderBtn.disabled = true;
             navigator.geolocation.getCurrentPosition(
                 (position) => {
                     const { latitude, longitude } = position.coords;
                     const uberEatsUrl = `https://www.ubereats.com/fr/search?diningMode=DELIVERY&q=${encodeURIComponent(keyword)}&pl=${encodeURIComponent(JSON.stringify({latitude, longitude}))}`;
+                    
+                    // On utilise simplement window.open. L'app Android se chargera de l'intercepter.
                     window.open(uberEatsUrl, '_blank');
-                    orderBtn.textContent = 'Commander 🛵';
-                    orderBtn.disabled = false;
+                    
+                    orderBtn.textContent = 'Commander 🛵'; orderBtn.disabled = false;
                 },
                 (error) => {
-                    console.error("Erreur de géolocalisation:", error);
+                    console.error("Géolocalisation:", error);
                     let errorMessage = "Impossible de récupérer votre position. ";
                     if (error.code === 1) errorMessage += "Vous avez refusé l'accès.";
                     else errorMessage += "Veuillez vérifier les autorisations.";
                     resultText.innerHTML = `<span class="text-red-500 text-sm">${errorMessage}</span>`;
-                    orderBtn.textContent = 'Commander �';
-                    orderBtn.disabled = false;
+                    orderBtn.textContent = 'Commander 🛵'; orderBtn.disabled = false;
                 }
             );
         }
@@ -399,7 +354,6 @@
             spinBtn.disabled = options.length < 2;
         }
 
-        // --- Event Listeners ---
         spinBtn.addEventListener('click', spin);
         shareBtn.addEventListener('click', handleShareClick);
         orderBtn.addEventListener('click', handleOrderClick);
