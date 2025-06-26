@@ -9,89 +9,140 @@
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
-        body {
-            font-family: 'Poppins', sans-serif;
-            background: #f7f8fc;
-        }
+        body { font-family: 'Poppins', sans-serif; }
         #wheel-container::before {
             content: ''; position: absolute; top: -10px; left: 50%;
             transform: translateX(-50%); width: 0; height: 0;
             border-left: 18px solid transparent; border-right: 18px solid transparent;
             border-top: 25px solid #ef4444; z-index: 10;
         }
-        .btn-3d { transition: all 0.1s ease-in-out; }
-        .btn-3d:active { transform: translateY(6px); box-shadow: none !important; }
-
+        .btn-3d { transition: all 0.15s ease-out; }
+        .btn-3d:active { transform: translateY(4px) scale(0.98); box-shadow: none !important; }
         #spinBtn { background: linear-gradient(180deg, #f87171 0%, #ef4444 100%); box-shadow: 0 6px 0 #b91c1c; }
         #orderBtn { background: linear-gradient(180deg, #2dd4bf 0%, #0d9488 100%); box-shadow: 0 6px 0 #0f766e; }
         #shareBtn { background: linear-gradient(180deg, #60a5fa 0%, #2563eb 100%); box-shadow: 0 6px 0 #1e40af; }
-
         .animate-pop-in { animation: popIn 0.6s cubic-bezier(0.68, -0.6, 0.27, 1.6) forwards; }
         @keyframes popIn { from { transform: scale(0.3) rotate(-30deg); opacity: 0; } to { transform: scale(1) rotate(0deg); opacity: 1; } }
-        
         .list-item-enter { animation: slideIn 0.4s ease-out forwards; }
         @keyframes slideIn { from { opacity: 0; transform: translateX(-20px); } to { opacity: 1; transform: translateX(0); } }
-        
         summary { cursor: pointer; list-style: none; }
         summary::-webkit-details-marker { display: none; }
-        summary::after { content: '▲'; font-size: 0.8em; margin-left: 8px; display: inline-block; transition: transform 0.2s; }
+        summary::after { content: '▲'; font-size: 0.8em; margin-left: 8px; display: inline-block; transition: transform 0.3s ease-in-out; }
         details[open] > summary::after { transform: rotate(180deg); }
+        details .list-container { overflow: hidden; transition: max-height 0.5s cubic-bezier(0.23, 1, 0.32, 1); max-height: 0; }
+        details[open] .list-container { max-height: 20rem; }
+        
+        .toggle-checkbox:checked { right: 0; border-color: #4ade80; }
+        .toggle-checkbox:checked + .toggle-label { background-color: #4ade80; }
     </style>
 </head>
-<body class="flex items-center justify-center min-h-screen p-4">
+<body class="flex items-center justify-center min-h-screen p-4 bg-gray-100 dark:bg-gray-900">
 
-    <main class="bg-white rounded-3xl shadow-2xl p-6 sm:p-8 w-full max-w-md mx-auto text-gray-800">
+    <main class="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl p-6 sm:p-8 w-full max-w-md mx-auto text-gray-800 dark:text-gray-200">
         
-        <h1 id="mainTitle" class="text-3xl md:text-4xl font-bold text-center mb-6"></h1>
-
-        <div id="wheel-container" class="relative w-full max-w-sm mx-auto mb-6" style="aspect-ratio: 1/1;">
-            <canvas id="wheelCanvas" width="500" height="500" class="w-full h-full"></canvas>
+        <div class="flex justify-start mb-4">
+             <button id="settingsBtn" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+            </button>
         </div>
+        
+        <h1 id="mainTitle" data-translate="main_title" class="text-3xl md:text-4xl font-bold text-center mb-6"></h1>
+        <div id="wheel-container" class="relative w-full max-w-sm mx-auto mb-6" style="aspect-ratio: 1/1;"><canvas id="wheelCanvas" width="500" height="500" class="w-full h-full"></canvas></div>
         
         <div class="h-16 mb-4 flex flex-col items-center justify-center">
              <p id="resultText" class="text-center text-xl sm:text-2xl font-bold transition-all duration-300"></p>
              <div id="resultActions" class="hidden mt-2 flex items-center justify-center space-x-4">
-                 <button id="orderBtn" class="text-white font-bold py-2 px-6 rounded-xl transition-all duration-200 text-sm btn-3d">
-                    Commander 🛵
-                 </button>
-                 <button id="shareBtn" class="text-white font-bold py-2 px-6 rounded-xl btn-3d">
-                    Partager 🔗
-                </button>
+                 <button id="orderBtn" data-translate="order_btn" class="text-white font-bold py-2 px-6 rounded-xl transition-all duration-200 text-sm btn-3d"></button>
+                 <button id="shareBtn" data-translate="share_btn" class="text-white font-bold py-2 px-6 rounded-xl btn-3d"></button>
              </div>
         </div>
 
-        <div class="grid gap-4">
-            <button id="spinBtn" class="w-full text-white font-bold text-2xl py-4 px-10 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed btn-3d">
-                LANCER ! 🚀
-            </button>
-        </div>
-        <p id="copyFeedback" class="text-center text-green-600 font-semibold mt-2 h-4"></p>
-        
-
-        <hr class="my-6 border-gray-200">
+        <div class="grid gap-4"><button id="spinBtn" data-translate="spin_btn" class="w-full text-white font-bold text-2xl py-4 px-10 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed btn-3d"></button></div>
+        <p id="copyFeedback" class="text-center text-green-600 dark:text-green-400 font-semibold mt-2 h-4"></p>
+        <hr class="my-6 border-gray-200 dark:border-gray-700">
 
         <section class="space-y-4">
             <div>
-                <label for="optionInput" class="block text-sm font-semibold mb-2 text-gray-600">Ajouter un plat (l'IA trouvera l'emoji !)</label>
+                <label for="optionInput" data-translate="add_dish_label" class="block text-sm font-semibold mb-2 text-gray-600 dark:text-gray-400"></label>
                 <div class="flex flex-col sm:flex-row gap-2">
-                    <input type="text" id="optionInput" placeholder="Ex: Paella, Couscous..." class="flex-grow bg-gray-100 rounded-lg p-3 border-2 border-gray-200 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 transition">
-                    <button id="addBtn" class="bg-indigo-500 text-white font-bold py-3 px-6 rounded-lg hover:bg-indigo-600 transition-colors duration-200 shadow hover:shadow-lg disabled:opacity-75 disabled:cursor-wait w-full sm:w-auto">Ajouter</button>
+                    <input type="text" id="optionInput" data-translate="add_dish_placeholder" class="flex-grow bg-gray-100 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 rounded-lg p-3 border-2 border-gray-200 dark:border-gray-600 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 dark:focus:ring-indigo-400 transition">
+                    <button id="addBtn" data-translate="add_btn" class="bg-indigo-500 text-white font-bold py-3 px-6 rounded-lg hover:bg-indigo-600 shadow w-full sm:w-auto btn-3d"></button>
                 </div>
             </div>
             
-            <details open>
-                <summary class="text-lg font-semibold text-gray-700 select-none">Plats Actuels</summary>
-                <div id="optionsList" class="mt-2 bg-gray-50 rounded-lg p-3 space-y-2 max-h-48 overflow-y-auto"></div>
-            </details>
-            
-            <details id="recentlyDeletedContainer" class="hidden">
-                <summary class="text-lg font-semibold text-gray-700 select-none">Récemment Supprimés</summary>
-                <div id="recentlyDeletedList" class="mt-2 bg-gray-50 rounded-lg p-3 space-y-2 max-h-48 overflow-y-auto"></div>
-            </details>
+            <details open><summary data-translate="current_options_title" class="text-lg font-semibold text-gray-700 dark:text-gray-300 select-none"></summary><div class="list-container"><div id="optionsList" class="mt-2 bg-gray-100 dark:bg-gray-900/50 rounded-lg p-3 space-y-2"></div></div></details>
+            <details id="recentlyDeletedContainer" class="hidden"><summary data-translate="deleted_options_title" class="text-lg font-semibold text-gray-700 dark:text-gray-300 select-none"></summary><div class="list-container"><div id="recentlyDeletedList" class="mt-2 bg-gray-100 dark:bg-gray-900/50 rounded-lg p-3 space-y-2"></div></div></details>
         </section>
     </main>
 
+    <!-- Menu Paramètres -->
+    <div id="settingsModal" class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center hidden z-50 p-4">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-2xl w-full max-w-sm animate-pop-in">
+            <h2 data-translate="settings_title" class="text-2xl font-bold text-gray-800 dark:text-white mb-6">Paramètres</h2>
+            <div class="space-y-4">
+                <!-- Son -->
+                <div class="flex items-center justify-between">
+                    <span data-translate="setting_sound" class="font-medium dark:text-gray-300">Son</span>
+                    <label class="relative inline-flex items-center cursor-pointer"><input type="checkbox" id="soundToggle" class="sr-only peer"><div class="w-11 h-6 bg-gray-200 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-green-500"></div></label>
+                </div>
+                <!-- Vibrations -->
+                <div class="flex items-center justify-between">
+                    <span data-translate="setting_vibration" class="font-medium dark:text-gray-300">Vibrations</span>
+                     <label class="relative inline-flex items-center cursor-pointer"><input type="checkbox" id="vibrationToggle" class="sr-only peer"><div class="w-11 h-6 bg-gray-200 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-green-500"></div></label>
+                </div>
+                <!-- Langue -->
+                <div class="flex items-center justify-between">
+                    <span data-translate="setting_language" class="font-medium dark:text-gray-300">Langue</span>
+                    <div id="lang-selector-modal" class="flex space-x-2"><button data-lang="fr" class="p-1 rounded-full opacity-50 hover:opacity-100 transition-opacity">🇫🇷</button><button data-lang="en" class="p-1 rounded-full opacity-50 hover:opacity-100 transition-opacity">🇬🇧</button></div>
+                </div>
+                <!-- Thème -->
+                <div class="flex items-center justify-between">
+                     <span data-translate="setting_theme" class="font-medium dark:text-gray-300">Thème</span>
+                     <div class="flex space-x-1 bg-gray-200 dark:bg-gray-700 rounded-lg p-1">
+                         <button data-theme="light" class="theme-btn px-2 py-1 text-sm rounded-md" data-translate="theme_light">Clair</button>
+                         <button data-theme="dark" class="theme-btn px-2 py-1 text-sm rounded-md" data-translate="theme_dark">Sombre</button>
+                         <button data-theme="system" class="theme-btn px-2 py-1 text-sm rounded-md" data-translate="theme_system">Système</button>
+                     </div>
+                </div>
+                 <!-- Réinitialiser -->
+                <div class="pt-4">
+                    <button id="resetBtn" data-translate="reset_btn" class="w-full bg-red-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-600 btn-3d" style="box-shadow: 0 4px 0 #b91c1c;">Réinitialiser la liste</button>
+                </div>
+            </div>
+             <button id="closeSettingsBtn" class="mt-8 w-full bg-gray-200 dark:bg-gray-600 dark:text-gray-200 font-bold py-2 px-8 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500" data-translate="close_btn">Fermer</button>
+        </div>
+    </div>
+
     <script>
+        const translations = {
+            fr: {
+                main_title: "Qu'est-ce qu'on mange ? 🤔", main_title_celebrate: "Bon appétit ! 🎉", order_btn: "Commander 🛵",
+                share_btn: "Partager 🔗", spin_btn: "LANCER ! 🚀", add_dish_label: "Ajouter un plat", add_dish_placeholder: "Ex: Paella, Couscous...",
+                add_btn: "Ajouter", current_options_title: "Plats Actuels", deleted_options_title: "Récemment Supprimés", empty_list: "Ajoutez des plats !",
+                spinning: "Ça tourne...", result_prefix: "Ce sera :", result_suffix: "!", copy_success: "Lien copié !", copy_error: "Erreur de copie",
+                location_error_prefix: "Impossible de récupérer votre position.", location_denied: "Vous avez refusé l'accès.",
+                location_check_perms: "Veuillez vérifier les autorisations.", location_in_progress: "Localisation...",
+                default_dishes: ['Pizza', 'Burger', 'Sushi', 'Salade', 'Pâtes', 'Tacos', 'Libanais', 'Poulet frit'], uber_eats_domain: 'fr',
+                settings_title: "Paramètres", setting_sound: "Son", setting_vibration: "Vibrations", setting_language: "Langue", setting_theme: "Thème",
+                theme_light: "Clair", theme_dark: "Sombre", theme_system: "Système", close_btn: "Fermer", reset_btn: "Réinitialiser la liste",
+                share_title: "SpinDine - Ma Roue de Repas", share_text: "Tu ne sais pas quoi manger ? Lance la roue que j'ai créée !"
+            },
+            en: {
+                main_title: "What Should I Eat? 🤔", main_title_celebrate: "Enjoy your meal! 🎉", order_btn: "Order 🛵",
+                share_btn: "Share 🔗", spin_btn: "SPIN! 🚀", add_dish_label: "Add a dish", add_dish_placeholder: "E.g., Paella, Couscous...",
+                add_btn: "Add", current_options_title: "Current Dishes", deleted_options_title: "Recently Deleted", empty_list: "Add some dishes!",
+                spinning: "Spinning...", result_prefix: "It's gonna be:", result_suffix: "!", copy_success: "Link copied!", copy_error: "Copy error",
+                location_error_prefix: "Could not get your location.", location_denied: "You denied location access.",
+                location_check_perms: "Please check your permissions.", location_in_progress: "Getting location...",
+                default_dishes: ['Pizza', 'Burger', 'Sushi', 'Salad', 'Pasta', 'Tacos', 'Lebanese', 'Fried chicken'], uber_eats_domain: 'gb',
+                settings_title: "Settings", setting_sound: "Sound", setting_vibration: "Vibrations", setting_language: "Language", setting_theme: "Theme",
+                theme_light: "Light", theme_dark: "Dark", theme_system: "System", close_btn: "Close", reset_btn: "Reset list",
+                share_title: "SpinDine - My Meal Wheel", share_text: "Don't know what to eat? Spin the wheel I made!"
+            }
+        };
+
+        let currentLang = 'fr';
+        
         const canvas = document.getElementById('wheelCanvas');
         const ctx = canvas.getContext('2d');
         const spinBtn = document.getElementById('spinBtn');
@@ -106,29 +157,116 @@
         const recentlyDeletedList = document.getElementById('recentlyDeletedList');
         const mainTitle = document.getElementById('mainTitle');
         const resultActions = document.getElementById('resultActions');
+        const settingsBtn = document.getElementById('settingsBtn');
+        const settingsModal = document.getElementById('settingsModal');
+        const closeSettingsBtn = document.getElementById('closeSettingsBtn');
+        const soundToggle = document.getElementById('soundToggle');
+        const vibrationToggle = document.getElementById('vibrationToggle');
+        const langSelectorModal = document.getElementById('lang-selector-modal');
+        const resetBtn = document.getElementById('resetBtn');
         
         let options = [];
         let recentlyDeletedOptions = [];
         const colors = ["#ef4444", "#f97316", "#f59e0b", "#84cc16", "#22c55e", "#14b8a6", "#06b6d4", "#3b82f6", "#8b5cf6", "#d946ef"];
-        
         let startAngle = 0, arc = 0, spinTimeout = null, spinAngleStart = 0, spinTime = 0, spinTimeTotal = 0;
-
-        let audioStarted = false;
+        let audioStarted = false, lastSegmentIndex = 0, canPlayTick = true;
+        
         const tickSynth = new Tone.MembraneSynth({ pitchDecay: 0.01, octaves: 2, envelope: { attack: 0.001, decay: 0.2, sustain: 0 } }).toDestination();
         const winSynth = new Tone.PolySynth(Tone.Synth, { envelope: { attack: 0.02, decay: 0.1, sustain: 0.3, release: 0.4 } }).toDestination();
         winSynth.volume.value = -6;
-        let lastSegmentIndex = 0;
-        let canPlayTick = true;
+        
+        const emojiMap = {
+            'pizza': '🍕', 'sushi': '🍣', 'burger': '🍔', 'salade': '🥗', 'salad': '🥗', 'pâtes': '🍝', 'pasta': '🍝', 
+            'tacos': '🌮', 'curry': '🍛', 'raclette': '🧀', 'ramen': '🍜', 'steak': '🥩',
+            'glace': '🍦', 'crêpes': '🥞', 'kebab': '🥙', 'fondue': '🫕', 'saucisse': '🌭', 'frites': '🍟',
+            'libanais': '🥙', 'lebanese': '🥙', 'poulet frit': '🍗', 'fried chicken': '🍗'
+        };
 
-        function setTitle(state = 'default') {
-            mainTitle.innerHTML = (state === 'celebrate') ? 'Bon appétit ! 🎉' : "Qu'est-ce qu'on mange ? 🤔";
+        function saveSettings() {
+            const settings = {
+                sound: soundToggle.checked,
+                vibration: vibrationToggle.checked,
+                theme: document.querySelector('.theme-btn.bg-blue-500')?.dataset.theme || 'system',
+                lang: currentLang
+            };
+            localStorage.setItem('spinDineSettings', JSON.stringify(settings));
         }
+
+        function loadSettings() {
+            const savedSettings = JSON.parse(localStorage.getItem('spinDineSettings'));
+            if (savedSettings) {
+                soundToggle.checked = savedSettings.sound;
+                vibrationToggle.checked = savedSettings.vibration;
+                Tone.Master.mute = !savedSettings.sound;
+                return savedSettings;
+            }
+            soundToggle.checked = true;
+            vibrationToggle.checked = true;
+            return { theme: 'system', lang: navigator.language.split('-')[0] || 'fr' };
+        }
+
+        function applyTheme(theme) {
+            document.querySelectorAll('.theme-btn').forEach(btn => {
+                btn.classList.remove('bg-blue-500', 'text-white', 'dark:bg-blue-500');
+                if (btn.dataset.theme === theme) {
+                    btn.classList.add('bg-blue-500', 'text-white', 'dark:bg-blue-500');
+                }
+            });
+            if (theme === 'dark') {
+                document.documentElement.classList.add('dark');
+            } else if (theme === 'light') {
+                document.documentElement.classList.remove('dark');
+            } else { 
+                if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                    document.documentElement.classList.add('dark');
+                } else {
+                    document.documentElement.classList.remove('dark');
+                }
+            }
+            drawWheel();
+        }
+
+        function saveOptionsToLocalStorage() { try { localStorage.setItem('spinDineData', JSON.stringify({ options, recentlyDeletedOptions })); } catch (e) { console.error("Erreur sauvegarde:", e); } }
+        function loadOptionsFromLocalStorage() { try { const data = JSON.parse(localStorage.getItem('spinDineData')); if (data) { options = data.options || []; recentlyDeletedOptions = data.recentlyDeleted || []; return true; } } catch (e) { console.error("Erreur chargement:", e); } return false; }
+
+        function applyLanguage(lang) {
+            const langToSet = translations[lang] ? lang : 'fr';
+            const languageIsChanging = currentLang !== langToSet;
+            const oldDefaultDishes = translations[currentLang] ? translations[currentLang].default_dishes.map(name => ({ name: name, emoji: getEmoji(name) })) : [];
+            const isUsingDefaultDishes = JSON.stringify(options) === JSON.stringify(oldDefaultDishes);
+            currentLang = langToSet;
+            document.documentElement.lang = langToSet;
+            document.querySelectorAll('[data-translate]').forEach(el => {
+                const key = el.dataset.translate;
+                if (translations[langToSet][key]) {
+                    if (el.tagName === 'INPUT') el.placeholder = translations[langToSet][key];
+                    else el.innerHTML = translations[langToSet][key];
+                }
+            });
+            document.querySelectorAll('#lang-selector-modal button').forEach(btn => {
+                btn.classList.toggle('opacity-50', btn.dataset.lang !== langToSet);
+                btn.classList.toggle('scale-125', btn.dataset.lang === langToSet);
+            });
+            
+            if (languageIsChanging && isUsingDefaultDishes) {
+                loadDefaultDishes();
+                updateApp();
+            }
+        }
+
+        function getEmoji(option) {
+            const cleanOption = option.trim().toLowerCase();
+            for (const [key, emoji] of Object.entries(emojiMap)) if (cleanOption.includes(key)) return emoji;
+            return '';
+        }
+
+        function setTitle(state = 'default') { mainTitle.innerHTML = translations[currentLang][state === 'celebrate' ? 'main_title_celebrate' : 'main_title']; }
 
         function renderOptionsList() {
             optionsList.innerHTML = options.length === 0 
-                ? '<p class="text-gray-500 text-center p-4">Ajoutez des plats !</p>'
+                ? `<p class="text-gray-500 text-center p-4">${translations[currentLang].empty_list}</p>`
                 : options.map((option, index) => `
-                    <div class="list-item-enter flex items-center justify-between bg-white p-2 rounded-md shadow-sm">
+                    <div class="list-item-enter flex items-center justify-between bg-white dark:bg-gray-700/50 p-2 rounded-md shadow-sm">
                         <span class="font-medium">${option.name} ${option.emoji}</span>
                         <button data-index="${index}" class="remove-btn text-gray-400 hover:text-red-500 font-bold text-xl px-2 transition-colors">&times;</button>
                     </div>`).join('');
@@ -137,8 +275,8 @@
         function renderRecentlyDeletedList() {
             recentlyDeletedContainer.classList.toggle('hidden', recentlyDeletedOptions.length === 0);
             recentlyDeletedList.innerHTML = recentlyDeletedOptions.map((option, index) => `
-                <div class="list-item-enter flex items-center justify-between bg-white p-2 rounded-md shadow-sm">
-                    <span class="font-medium text-gray-500 italic">${option.name} ${option.emoji}</span>
+                <div class="list-item-enter flex items-center justify-between bg-white dark:bg-gray-700/50 p-2 rounded-md shadow-sm">
+                    <span class="font-medium text-gray-500 dark:text-gray-400 italic">${option.name} ${option.emoji}</span>
                     <button data-index="${index}" class="restore-btn text-green-500 hover:text-green-700 font-bold text-2xl px-2 transition-colors">&#x21BA;</button>
                 </div>`).join('');
         }
@@ -147,7 +285,6 @@
             const outsideRadius = 220, textRadius = 160, canvasSize = 500;
             arc = options.length > 0 ? (2 * Math.PI) / options.length : 0;
             ctx.clearRect(0, 0, canvasSize, canvasSize);
-
             for (let i = 0; i < options.length; i++) {
                 const angle = startAngle + i * arc;
                 ctx.fillStyle = colors[i % colors.length];
@@ -155,9 +292,9 @@
                 ctx.arc(canvasSize/2, canvasSize/2, outsideRadius, angle, angle + arc, false);
                 ctx.closePath(); ctx.fill();
             }
-
             if (options.length > 1) {
-                ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 5;
+                ctx.strokeStyle = document.documentElement.classList.contains('dark') ? "#1f2937" : "#ffffff";
+                ctx.lineWidth = 5;
                 for (let i = 0; i < options.length; i++) {
                     const angle = startAngle + i * arc;
                     ctx.beginPath(); ctx.moveTo(canvasSize/2, canvasSize/2);
@@ -165,8 +302,8 @@
                     ctx.stroke();
                 }
             }
-            
-            ctx.fillStyle = "white"; ctx.font = 'bold 18px Poppins, sans-serif';
+            const maxTextWidth = 140;
+            ctx.fillStyle = "white";
             for (let i = 0; i < options.length; i++) {
                 ctx.save();
                 const textAngle = startAngle + i * arc + arc / 2;
@@ -174,61 +311,36 @@
                 const rotation = (textAngle > Math.PI / 2 && textAngle < 3 * Math.PI / 2) ? textAngle + Math.PI : textAngle;
                 ctx.rotate(rotation);
                 const text = `${options[i].name} ${options[i].emoji}`;
+                let fontSize = 18;
+                ctx.font = `bold ${fontSize}px Poppins, sans-serif`;
+                while (ctx.measureText(text).width > maxTextWidth && fontSize > 8) {
+                    fontSize--;
+                    ctx.font = `bold ${fontSize}px Poppins, sans-serif`;
+                }
                 ctx.fillText(text, -ctx.measureText(text).width / 2, 6);
                 ctx.restore();
             }
         }
         
-        async function fetchEmoji(newOptionName) {
-            try {
-                const prompt = `Pour le plat "${newOptionName}", quel est le meilleur emoji qui le représente ?`;
-                const payload = {
-                  contents: [{ role: "user", parts: [{ text: prompt }] }],
-                  generationConfig: {
-                    responseMimeType: "application/json",
-                    responseSchema: {
-                      type: "OBJECT",
-                      properties: { "emoji": { "type": "STRING", "description": "L'emoji qui représente le plat. Si aucun emoji spécifique n'est trouvé, utiliser '🍴'." } },
-                      required: ["emoji"]
-                    }
-                  }
-                };
-                const apiKey = "";
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                if (!response.ok) throw new Error(`API error: ${response.statusText}`);
-                const result = await response.json();
-                if (result.candidates && result.candidates[0].content && result.candidates[0].content.parts[0]) {
-                    const jsonText = result.candidates[0].content.parts[0].text;
-                    const parsedJson = JSON.parse(jsonText);
-                    if (parsedJson.emoji) return parsedJson.emoji;
-                }
-            } catch (error) { console.error("Erreur emoji:", error); }
-            return '🍴';
-        }
-
-        async function addOption(name, emoji) {
-            if (!name) return;
-            const newOptionName = name.trim();
-             if (!newOptionName || options.some(opt => opt.name.toLowerCase() === newOptionName.toLowerCase())) return;
-
-            addBtn.disabled = true; addBtn.textContent = '...';
-            let finalEmoji = emoji || await fetchEmoji(newOptionName);
-            options.push({ name: newOptionName.charAt(0).toUpperCase() + newOptionName.slice(1), emoji: finalEmoji });
-            optionInput.value = ''; addBtn.disabled = false; addBtn.textContent = 'Ajouter';
-            updateApp();
+        function addOption() {
+            const newOptionName = optionInput.value.trim();
+            if (!newOptionName || options.some(opt => opt.name.toLowerCase() === newOptionName.toLowerCase())) return;
+            const emoji = getEmoji(newOptionName);
+            options.push({ name: newOptionName.charAt(0).toUpperCase() + newOptionName.slice(1), emoji: emoji });
+            optionInput.value = '';
+            saveOptionsToLocalStorage(); updateApp();
         }
 
         function removeOption(index) {
             const [deletedOption] = options.splice(index, 1);
             if (deletedOption) recentlyDeletedOptions.push(deletedOption);
-            updateApp();
+            saveOptionsToLocalStorage(); updateApp();
         }
         
         function restoreOption(index) {
             const [restoredOption] = recentlyDeletedOptions.splice(index, 1);
             if (restoredOption) options.push(restoredOption);
-            updateApp();
+            saveOptionsToLocalStorage(); updateApp();
         }
 
         function fireConfetti() {
@@ -245,119 +357,131 @@
             if (options.length < 2) return;
             if (!audioStarted) { Tone.start(); audioStarted = true; }
             setTitle('default'); spinBtn.disabled = true;
-            resultText.textContent = 'Ça tourne...'; resultActions.classList.add('hidden');
+            resultText.textContent = translations[currentLang].spinning; 
+            resultActions.classList.add('hidden');
             resultText.classList.remove('animate-pop-in');
-            spinAngleStart = Math.random() * 10 + 10;
+            spinAngleStart = Math.random() * 20 + 15;
             spinTime = 0; spinTimeTotal = Math.random() * 4000 + 5000;
             rotateWheel();
         }
 
         function rotateWheel() {
-            spinTime += 30;
+            spinTime += 16;
             if (spinTime >= spinTimeTotal) { stopRotateWheel(); return; }
-            const spinAngle = spinAngleStart - easeOut(spinTime, 0, spinAngleStart, spinTimeTotal);
+            const spinAngle = easeOut(spinTime, spinAngleStart, -spinAngleStart, spinTimeTotal);
             startAngle += (spinAngle * Math.PI / 180);
             drawWheel();
             const currentSegmentIndex = Math.floor(options.length - (startAngle * options.length / (2 * Math.PI))) % options.length;
             if (currentSegmentIndex !== lastSegmentIndex) {
-                if (canPlayTick) {
-                    tickSynth.triggerAttack("C2");
-                    canPlayTick = false; setTimeout(() => { canPlayTick = true; }, 50);
-                }
+                if (canPlayTick) { tickSynth.triggerAttack("C2"); canPlayTick = false; setTimeout(() => { canPlayTick = true; }, 50); }
                 lastSegmentIndex = currentSegmentIndex;
             }
             spinTimeout = requestAnimationFrame(rotateWheel);
         }
-
+        
+        function vibrate() {
+            if (vibrationToggle.checked) {
+                if (typeof Android !== 'undefined' && Android.vibrate) { Android.vibrate(100); } 
+                else if (navigator.vibrate) { navigator.vibrate(100); }
+            }
+        }
+        
         function stopRotateWheel() {
             cancelAnimationFrame(spinTimeout);
             const degrees = startAngle * 180 / Math.PI + 90;
             const arcd = arc * 180 / Math.PI;
             const index = Math.floor((360 - degrees % 360) / arcd) % options.length;
             const option = options[index];
-            resultText.innerHTML = `Ce sera : <span class="text-indigo-600">${option.name} ${option.emoji}</span> !`;
+            resultText.innerHTML = `${translations[currentLang].result_prefix} <span class="text-indigo-600 dark:text-indigo-400">${option.name} ${option.emoji}</span> ${translations[currentLang].result_suffix}`;
             resultText.classList.add('animate-pop-in');
             setTitle('celebrate'); spinBtn.disabled = false;
             winSynth.triggerAttackRelease(["C4", "E4", "G4", "C5"], "0.8");
             fireConfetti();
+            vibrate();
             resultActions.classList.remove('hidden');
             orderBtn.dataset.keyword = option.name;
         }
         
-        function handleShareClick() {
+        async function handleShareClick() {
             const dishNames = options.map(opt => opt.name).join(',');
             const url = new URL(window.location.href);
             url.searchParams.set('dishes', encodeURIComponent(dishNames));
-            const textToCopy = url.href;
-            const textArea = document.createElement("textarea");
-            textArea.style.position = 'fixed'; textArea.style.top = '-9999px'; textArea.style.left = '-9999px';
-            textArea.value = textToCopy;
-            document.body.appendChild(textArea);
-            textArea.focus(); textArea.select();
-            try {
-                if (document.execCommand('copy')) copyFeedback.textContent = 'Lien copié !';
-                else copyFeedback.textContent = 'Erreur de copie';
-            } catch (err) {
-                console.error('Erreur de copie:', err);
-                copyFeedback.textContent = 'Erreur de copie';
+            const shareUrl = url.href;
+
+            const shareData = {
+                title: translations[currentLang].share_title,
+                text: translations[currentLang].share_text,
+                url: shareUrl,
+            };
+
+            if (navigator.share) {
+                try {
+                    await navigator.share(shareData);
+                } catch (err) {
+                    console.error('Erreur de partage: ', err);
+                }
+            } else {
+                const textArea = document.createElement("textarea");
+                textArea.style.position = 'fixed'; textArea.style.top = '-9999px'; textArea.style.left = '-9999px';
+                textArea.value = shareUrl;
+                document.body.appendChild(textArea);
+                textArea.focus(); textArea.select();
+                try {
+                    if (document.execCommand('copy')) copyFeedback.textContent = translations[currentLang].copy_success;
+                    else copyFeedback.textContent = translations[currentLang].copy_error;
+                } catch (err) {
+                    console.error('Erreur de copie:', err);
+                    copyFeedback.textContent = translations[currentLang].copy_error;
+                }
+                document.body.removeChild(textArea);
+                setTimeout(() => { copyFeedback.textContent = ''; }, 2000);
             }
-            document.body.removeChild(textArea);
-            setTimeout(() => { copyFeedback.textContent = ''; }, 2000);
         }
 
         function handleOrderClick(event) {
             const keyword = event.target.dataset.keyword; if (!keyword) return;
-            
-            // -- MODIFICATION IMPORTANTE --
-            // On appelle directement le pont de communication Android
-            if (typeof Android !== 'undefined' && Android.openUberEats) {
-                Android.openUberEats(keyword);
-            } else {
-                // Comportement par défaut pour le navigateur web
-                orderBtn.textContent = 'Localisation...'; orderBtn.disabled = true;
+            if (typeof Android !== 'undefined' && Android.openUberEats) { Android.openUberEats(keyword); } 
+            else {
+                orderBtn.textContent = translations[currentLang].location_in_progress; orderBtn.disabled = true;
                 navigator.geolocation.getCurrentPosition(
                     (position) => {
                         const { latitude, longitude } = position.coords;
-                        const uberEatsUrl = `https://www.ubereats.com/fr/search?diningMode=DELIVERY&q=${encodeURIComponent(keyword)}&pl=${encodeURIComponent(JSON.stringify({latitude, longitude}))}`;
+                        const domain = translations[currentLang].uber_eats_domain;
+                        const uberEatsUrl = `https://www.ubereats.com/${domain}/search?diningMode=DELIVERY&q=${encodeURIComponent(keyword)}&pl=${encodeURIComponent(JSON.stringify({latitude, longitude}))}`;
                         window.open(uberEatsUrl, '_blank');
-                        orderBtn.textContent = 'Commander 🛵'; orderBtn.disabled = false;
+                        orderBtn.innerHTML = translations[currentLang].order_btn; orderBtn.disabled = false;
                     },
                     (error) => {
                         console.error("Géolocalisation:", error);
-                        let errorMessage = "Impossible de récupérer votre position. ";
-                        if (error.code === 1) errorMessage += "Vous avez refusé l'accès.";
-                        else errorMessage += "Veuillez vérifier les autorisations.";
+                        let errorMessage = translations[currentLang].location_error_prefix;
+                        if (error.code === 1) errorMessage += " " + translations[currentLang].location_denied;
+                        else errorMessage += " " + translations[currentLang].location_check_perms;
                         resultText.innerHTML = `<span class="text-red-500 text-sm">${errorMessage}</span>`;
-                        orderBtn.textContent = 'Commander 🛵'; orderBtn.disabled = false;
+                        orderBtn.innerHTML = translations[currentLang].order_btn; orderBtn.disabled = false;
                     }
                 );
             }
         }
+        
+        function easeOut(t, b, c, d) { t /= d; t--; return c * (t * t * t + 1) + b; }
 
-        function easeOut(t, b, c, d) {
-            const ts = (t /= d) * t; const tc = ts * t;
-            return b + c * (tc + -3 * ts + 3 * t);
-        }
-
-        async function loadFromURL() {
+        function loadDefaultDishes() { options = translations[currentLang].default_dishes.map(name => ({ name: name, emoji: getEmoji(name) })); }
+        function loadApp() {
             const urlParams = new URLSearchParams(window.location.search);
             const sharedDishes = urlParams.get('dishes');
             if (sharedDishes) {
-                const dishNames = decodeURIComponent(sharedDishes).split(',');
-                options = [];
-                await Promise.all(dishNames.map(name => addOption(name, null)));
+                options = decodeURIComponent(sharedDishes).split(',').map(name => ({ name: name, emoji: getEmoji(name) }));
+                saveOptionsToLocalStorage();
             } else {
-                 options = [
-                    { name: 'Pizza', emoji: '🍕' }, { name: 'Burger', emoji: '🍔' }, { name: 'Sushi', emoji: '🍣' },
-                    { name: 'Salade', emoji: '🥗' }, { name: 'Pâtes', emoji: '🍝' }, { name: 'Tacos', emoji: '🌮' },
-                    { name: 'Libanais', emoji: '🥙' }, { name: 'Poulet frit', emoji: '🍗' }
-                ];
+                const loaded = loadOptionsFromLocalStorage();
+                if (!loaded || options.length === 0) loadDefaultDishes();
             }
         }
         
-        async function init() {
-            setTitle();
-            await loadFromURL();
+        function init() {
+            const settings = loadSettings();
+            loadApp();
+            applyLanguage(settings.lang);
             updateApp();
         }
 
@@ -371,16 +495,17 @@
         spinBtn.addEventListener('click', spin);
         shareBtn.addEventListener('click', handleShareClick);
         orderBtn.addEventListener('click', handleOrderClick);
-        addBtn.addEventListener('click', () => addOption(optionInput.value, null));
-        optionInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') { e.preventDefault(); addOption(optionInput.value, null); }
-        });
-        optionsList.addEventListener('click', (e) => {
-            if (e.target.closest('.remove-btn')) { removeOption(parseInt(e.target.closest('.remove-btn').dataset.index, 10)); }
-        });
-        recentlyDeletedList.addEventListener('click', (e) => {
-             if (e.target.closest('.restore-btn')) { restoreOption(parseInt(e.target.closest('.restore-btn').dataset.index, 10)); }
-        });
+        addBtn.addEventListener('click', addOption);
+        optionInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') { e.preventDefault(); addOption(); } });
+        optionsList.addEventListener('click', (e) => { if (e.target.closest('.remove-btn')) { removeOption(parseInt(e.target.closest('.remove-btn').dataset.index, 10)); } });
+        recentlyDeletedList.addEventListener('click', (e) => { if (e.target.closest('.restore-btn')) { restoreOption(parseInt(e.target.closest('.restore-btn').dataset.index, 10)); } });
+        settingsBtn.addEventListener('click', () => settingsModal.classList.remove('hidden'));
+        closeSettingsBtn.addEventListener('click', () => settingsModal.classList.add('hidden'));
+        soundToggle.addEventListener('change', (e) => { Tone.Master.mute = !e.target.checked; saveSettings(); });
+        vibrationToggle.addEventListener('change', () => saveSettings());
+        langSelectorModal.addEventListener('click', (e) => { if (e.target.dataset.lang) { applyLanguage(e.target.dataset.lang); saveSettings(); } });
+        document.querySelector('.theme-btn').parentElement.addEventListener('click', (e) => { if(e.target.dataset.theme) { applyTheme(e.target.dataset.theme); saveSettings(); } });
+        resetBtn.addEventListener('click', () => { if(confirm(translations[currentLang].reset_btn + '?')) { localStorage.removeItem('spinDineData'); loadDefaultDishes(); updateApp(); } });
         
         init();
     </script>
